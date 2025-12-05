@@ -1,105 +1,129 @@
 import { useState, useEffect } from "react";
 import { useWindowSize } from "react-use";
 import Confetti from "react-confetti";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "./lib/supabase";
 
-const track = async () => {
-  console.log("Tracked!");
-};
-
-// Array of love messages (acts as our "API")
-const loveMessages = [
-  "You are the reason I smile every day 💕",
-  "Every moment with you is a treasure 💖",
-  "You make my heart skip a beat 💗",
-  "I fall for you more every single day 💘",
-  "You're my favorite notification 📱❤️",
-  "Being with you feels like home 🏠💕",
-  "You're the missing piece to my puzzle 🧩❤️",
-  "My heart beats your name 💓",
-  "You're my today and all of my tomorrows 🌅💕",
-  "Loving you is the best decision I ever made 💖",
+// Character images array for shuffling
+const characterImages = [
+  "/character/one.png",
+  "/character/two.png",
+  "/character/three.png",
+  "/character/four.png",
+  "/character/five.png",
+  "/character/six.png",
+  "/character/seven.png",
 ];
 
-// Get a "daily" message based on the date
-const getDailyLoveMessage = () => {
-  const today = new Date();
-  const dayOfYear = Math.floor(
-    (today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
-  return loveMessages[dayOfYear % loveMessages.length];
+// Shuffle array function
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 };
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [codeInput, setCodeInput] = useState("");
   const [error, setError] = useState("");
-  const [dailyMessage, setDailyMessage] = useState("");
-  const [showMainContent, setShowMainContent] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [dailyQuote, setDailyQuote] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [shuffledImages, setShuffledImages] = useState<string[]>([]);
 
-  const secretCode = import.meta.env.VITE_SECRET_CODE;
-
-  const handleCodeSubmit = () => {
-    if (codeInput.toLowerCase() === secretCode.toLowerCase()) {
-      setIsAuthenticated(true);
-      setDailyMessage(getDailyLoveMessage());
-      setError("");
-    } else {
-      setError("Wrong code, try again cutie! 😘");
-    }
-  };
-
-  const steps = [
-    {
-      content: "Heyyyyy, pretty girl.",
-      image: "/character/one.png",
-    },
-    {
-      content: `Hey , recently, we met.
-      And somehow, you've been on my mind ever since.
-      `,
-      image: "/character/two.png",
-    },
-    {
-      content: `Then we went on our first date And I realized—yep, I want this girl.
-      `,
-      image: "/character/three.png",
-    },
-    {
-      content: `You're beautiful, you're smart, you're fun,
-and you make spending time together feel too short.`,
-      image: "/character/four.png",
-    },
-    {
-      content: `I look forward to when I'll see you again,
-hold your hands, and look into your pretty eyes ❤.`,
-      image: "/character/five.png",
-    },
-    {
-      content: "So now I've got a question for you…",
-      image: "/character/six.png",
-    },
-    {
-      content: "Will you be my Valentine?",
-      image: "/character/seven.png",
-    },
-  ];
-  const [currentStep, setCurrentStep] = useState(0);
-  const [sheWantsToBeMyValentine, setSheWantsToBeMyValentine] = useState(false);
   const { width, height } = useWindowSize();
 
+  // Shuffle images on mount
   useEffect(() => {
-    const imagePaths = [
-      ...steps.map((step) => step.image),
-      "/character/yayyyy.png",
-    ];
+    setShuffledImages(shuffleArray(characterImages));
+  }, []);
 
-    imagePaths.forEach((path) => {
+  // Preload images
+  useEffect(() => {
+    characterImages.forEach((path) => {
       const img = new Image();
       img.src = path;
     });
   }, []);
+
+  // Auto-rotate images
+  useEffect(() => {
+    if (isAuthenticated && shuffledImages.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % shuffledImages.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, shuffledImages]);
+
+  // Fetch daily quote from Supabase
+  const fetchDailyQuote = async () => {
+    const today = new Date().toISOString().split("T")[0];
+
+    const { data, error } = await supabase
+      .from("quotes")
+      .select("quote")
+      .eq("date", today)
+      .single();
+
+    if (error || !data) {
+      // Fallback: get a random quote if no quote for today
+      const { data: randomQuote } = await supabase
+        .from("quotes")
+        .select("quote")
+        .limit(1)
+        .order("id", { ascending: false });
+
+      return randomQuote?.[0]?.quote || "You are loved more than you know 💕";
+    }
+
+    return data.quote;
+  };
+
+  // Verify password against Supabase
+  const handleCodeSubmit = async () => {
+    if (!codeInput.trim()) {
+      setError("Please enter a code");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const { data, error: dbError } = await supabase
+        .from("users")
+        .select("name")
+        .eq("password", codeInput.toLowerCase())
+        .single();
+
+      if (dbError || !data) {
+        setError("Wrong code, try again cutie you got this!! 😘");
+        setIsLoading(false);
+        return;
+      }
+
+      // Password valid - get user name and daily quote
+      setUserName(data.name);
+      const quote = await fetchDailyQuote();
+      setDailyQuote(quote);
+      setIsAuthenticated(true);
+      setShowConfetti(true);
+
+      // Stop confetti after 5 seconds
+      setTimeout(() => setShowConfetti(false), 5000);
+    } catch (err) {
+      setError("Something went wrong, try again! 💔");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Password Entry Screen
   if (!isAuthenticated) {
@@ -109,156 +133,127 @@ hold your hands, and look into your pretty eyes ❤.`,
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center"
+          className="text-center w-full"
         >
-          <h1 className="text-4xl font-bold mb-2">🔐</h1>
+          <motion.h1
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="text-6xl mb-4"
+          >
+            💝
+          </motion.h1>
           <h2 className="text-2xl font-bold mb-6">Enter the secret code</h2>
           <input
             type="password"
             value={codeInput}
             onChange={(e) => setCodeInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCodeSubmit()}
-            placeholder="Type the magic word..."
-            className="w-full py-3 px-4 rounded-xl text-[#FFC5D3] text-center text-lg outline-none mb-4"
+            placeholder="Type the magic word ..."
+            className="w-full py-3 px-4 rounded-xl bg-white text-pink-400 text-center text-lg outline-none mb-4"
+            disabled={isLoading}
           />
-          {error && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-white mb-4"
-            >
-              {error}
-            </motion.p>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="text-white mb-4 font-semibold"
+              >
+                {error}
+              </motion.p>
+            )}
+          </AnimatePresence>
           <button
             onClick={handleCodeSubmit}
-            className="bg-white text-[#FFC5D3] py-3 text-xl rounded-xl w-full font-semibold"
+            disabled={isLoading}
+            className="bg-white text-[#FFC5D3] cursor-pointer py-3 text-xl rounded-xl w-full font-semibold disabled:opacity-70"
           >
-            Enter 💕
+            {isLoading ? "Checking... 💭" : "Enter 💕"}
           </button>
         </motion.div>
       </div>
     );
   }
 
-  // Daily Love Message Screen
-  if (!showMainContent) {
-    return (
-      <div className="bg-[#FFC5D3] min-h-screen text-white p-5 flex flex-col items-center justify-center max-w-md mx-auto">
+  // Main Content - Greeting with Daily Quote
+  return (
+    <>
+      {showConfetti && <Confetti width={width} height={height} />}
+
+      <div className="bg-[#FFC5D3] max-h-screen text-white p-5 flex flex-col items-center justify-center max-w-md mx-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="text-center"
+          className="text-center w-full"
         >
-          <h1 className="text-5xl mb-4">💌</h1>
-          <h2 className="text-xl font-bold mb-2">Today's Love Note</h2>
+          {/* Greeting */}
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-3xl font-bold mb-2"
+          >
+            Hey {userName}! 💖
+          </motion.h1>
+
+          {/* Shuffled Character Image */}
+          <AnimatePresence mode="wait">
+            {shuffledImages.length > 0 && (
+              <motion.img
+                key={currentImageIndex}
+                src={shuffledImages[currentImageIndex]}
+                alt="Love character"
+                initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                exit={{ opacity: 0, scale: 0.8, rotate: 10 }}
+                transition={{ duration: 0.5 }}
+                className="w-48 mx-auto my-6"
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Daily Quote */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="bg-white/20 rounded-2xl p-6 mb-6"
+          >
+            <h2 className="text-lg font-semibold mb-2">💌 Today's message</h2>
+            <p className="text-2xl font-bold">{dailyQuote}</p>
+          </motion.div>
+
+          {/* Date */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="text-2xl font-bold mb-8 px-4"
+            transition={{ delay: 0.7 }}
+            className="text-white/80"
           >
-            {dailyMessage}
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
           </motion.p>
-          <button
-            onClick={() => setShowMainContent(true)}
-            className="bg-white text-[#FFC5D3] py-3 text-xl rounded-xl w-full font-semibold"
+          <p className="text-white/80">
+            Make sure you come back tommorrow to get a new message 😘
+          </p>
+
+          {/* Replay Confetti Button */}
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9 }}
+            onClick={() => setShowConfetti(true)}
+            className="mt-6 bg-white text-[#FFC5D3] py-3 px-6 text-lg rounded-xl font-semibold"
           >
-            Continue 💖
-          </button>
+            More Confetti! 🎉
+          </motion.button>
         </motion.div>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      {sheWantsToBeMyValentine && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Confetti width={width} height={height} />
-          <div className="fixed top-0 left-0 w-full h-full bg-[#FFC5D3] flex flex-col items-center justify-center">
-            <motion.h1
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3, type: "spring" }}
-              className="text-white text-4xl font-bold"
-            >
-              Yayyyyyyy!!!!!
-            </motion.h1>
-            <img
-              src="/character/yayyyy.png"
-              alt=""
-              className="w-40 animate-bounce"
-            />
-          </div>
-        </motion.div>
-      )}
-      <div className="bg-[#FFC5D3] min-h-screen text-white p-5 flex flex-col items-center justify-center max-w-md mx-auto">
-        <motion.img
-          key={currentStep}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          src={steps[currentStep].image}
-          alt=""
-          className="w-40"
-        />
-        <motion.div
-          key={currentStep + "-text"}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="font-josefin text-4xl font-bold"
-        >
-          {steps[currentStep].content}
-        </motion.div>
-
-        {currentStep < 6 && (
-          <>
-            <button
-              onClick={() => setCurrentStep(currentStep + 1)}
-              className="bg-white text-[#FFC5D3] py-3 text-xl rounded-xl w-full mt-10 font-semibold"
-            >
-              Next
-            </button>
-            {currentStep > 0 && (
-              <button
-                onClick={() => setCurrentStep(currentStep - 1)}
-                className="bg-white text-[#FFC5D3] py-3 text-xl rounded-xl w-full mt-2 font-semibold opacity-90"
-              >
-                Back
-              </button>
-            )}
-          </>
-        )}
-        {currentStep === 6 && (
-          <>
-            <button
-              onClick={async () => {
-                setSheWantsToBeMyValentine(true);
-                await track();
-              }}
-              className="bg-white text-[#FFC5D3] py-3 text-xl rounded-xl w-full mt-10 font-semibold"
-            >
-              Yes
-            </button>
-
-            <button
-              onClick={async () => {
-                setSheWantsToBeMyValentine(true);
-                await track();
-              }}
-              className="bg-white text-[#FFC5D3] py-3 text-xl rounded-xl w-full mt-2 font-semibold"
-            >
-              Yes
-            </button>
-          </>
-        )}
       </div>
     </>
   );
