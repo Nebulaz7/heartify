@@ -172,6 +172,11 @@ function App() {
             {isLoading ? "Checking... 💭" : "Enter 💕"}
           </button>
         </motion.div>
+
+        {/* Footer - moved outside motion.div */}
+        <footer className="absolute bottom-4 left-0 right-0 text-center text-white/70 text-sm">
+          Made with 💖 by Peters Joshua
+        </footer>
       </div>
     );
   }
@@ -181,7 +186,7 @@ function App() {
     <>
       {showConfetti && <Confetti width={width} height={height} />}
 
-      <div className="bg-[#FFC5D3] max-h-screen text-white p-5 flex flex-col items-center justify-center max-w-md mx-auto">
+      <div className="bg-[#FFC5D3] max-h-screen text-white p-5 flex flex-col items-center justify-center max-w-md mx-auto relative">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -254,6 +259,11 @@ function App() {
             More Confetti! 🎉
           </motion.button>
         </motion.div>
+
+        {/* Footer - moved outside motion.div */}
+        <footer className="absolute bottom-0 pt-4 mt-4 left-0 right-0 text-center text-black text-sm">
+          Made with 💖 by Peters Joshua
+        </footer>
       </div>
     </>
   );
