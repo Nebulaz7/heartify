@@ -1,4 +1,4 @@
-# 💝 L-Message - Personalized Love Message App
+# 💝 Heartify- Personalized Love Message App
 
 A beautiful, personalized love message application built with React, TypeScript, and Supabase. Send your special someone a unique daily love note with animations and confetti!
 

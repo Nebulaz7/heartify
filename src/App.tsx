@@ -175,7 +175,7 @@ function App() {
 
         {/* Footer - moved outside motion.div */}
         <footer className="absolute bottom-4 left-0 right-0 text-center text-white/70 text-sm">
-          Made with 💖 by Peters Joshua
+          Heartify - Made with 💖 by Peters Joshua
         </footer>
       </div>
     );
@@ -262,7 +262,7 @@ function App() {
 
         {/* Footer - moved outside motion.div */}
         <footer className="absolute bottom-0 pt-4 mt-4 left-0 right-0 text-center text-black text-sm">
-          Made with 💖 by Peters Joshua
+          Heartify - Made with 💖 by Peters Joshua
         </footer>
       </div>
     </>
