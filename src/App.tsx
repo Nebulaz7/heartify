@@ -205,18 +205,20 @@ function App() {
 
           {/* Shuffled Character Image */}
           <AnimatePresence mode="wait">
-            {shuffledImages.length > 0 && (
-              <motion.img
-                key={currentImageIndex}
-                src={shuffledImages[currentImageIndex]}
-                alt="Love character"
-                initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-                animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                exit={{ opacity: 0, scale: 0.8, rotate: 10 }}
-                transition={{ duration: 0.5 }}
-                className="w-48 mx-auto my-6"
-              />
-            )}
+            <div key="spacer" style={{ height: 192 }}>
+              {shuffledImages.length > 0 && (
+                <motion.img
+                  key={currentImageIndex}
+                  src={shuffledImages[currentImageIndex]}
+                  alt="Love character"
+                  initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, rotate: 10 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-48 mx-auto my-6"
+                />
+              )}
+            </div>
           </AnimatePresence>
 
           {/* Daily Quote */}
