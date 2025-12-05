@@ -30,7 +30,7 @@ function App() {
   const [codeInput, setCodeInput] = useState("");
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("");
-  const [userId, setUserId] = useState<number | null>(null);
+  const [_userId, setUserId] = useState<number | null>(null);
   const [dailyQuote, setDailyQuote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
