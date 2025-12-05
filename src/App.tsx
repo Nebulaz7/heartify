@@ -30,6 +30,7 @@ function App() {
   const [codeInput, setCodeInput] = useState("");
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("");
+  const [userId, setUserId] = useState<number | null>(null);
   const [dailyQuote, setDailyQuote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -61,25 +62,41 @@ function App() {
     }
   }, [isAuthenticated, shuffledImages]);
 
-  // Fetch daily quote from Supabase
-  const fetchDailyQuote = async () => {
+  // Fetch daily quote for specific user from Supabase
+  const fetchDailyQuote = async (userIdParam: number) => {
     const today = new Date().toISOString().split("T")[0];
 
+    // Try to get quote for this user for today
     const { data, error } = await supabase
       .from("quotes")
       .select("quote")
+      .eq("user_id", userIdParam)
       .eq("date", today)
       .single();
 
     if (error || !data) {
-      // Fallback: get a random quote if no quote for today
-      const { data: randomQuote } = await supabase
+      // Fallback: get the most recent quote for this user
+      const { data: recentQuote } = await supabase
         .from("quotes")
         .select("quote")
+        .eq("user_id", userIdParam)
+        .order("date", { ascending: false })
         .limit(1)
-        .order("id", { ascending: false });
+        .single();
 
-      return randomQuote?.[0]?.quote || "You are loved more than you know 💕";
+      if (recentQuote) {
+        return recentQuote.quote;
+      }
+
+      // Final fallback: get any random quote for this user
+      const { data: anyQuote } = await supabase
+        .from("quotes")
+        .select("quote")
+        .eq("user_id", userIdParam)
+        .limit(1)
+        .single();
+
+      return anyQuote?.quote || "You are loved more than you know 💕";
     }
 
     return data.quote;
@@ -98,7 +115,7 @@ function App() {
     try {
       const { data, error: dbError } = await supabase
         .from("users")
-        .select("name")
+        .select("id, name")
         .eq("password", codeInput.toLowerCase())
         .single();
 
@@ -108,9 +125,10 @@ function App() {
         return;
       }
 
-      // Password valid - get user name and daily quote
+      // Password valid - get user info and their daily quote
+      setUserId(data.id);
       setUserName(data.name);
-      const quote = await fetchDailyQuote();
+      const quote = await fetchDailyQuote(data.id);
       setDailyQuote(quote);
       setIsAuthenticated(true);
       setShowConfetti(true);
@@ -128,7 +146,7 @@ function App() {
   // Password Entry Screen
   if (!isAuthenticated) {
     return (
-      <div className="bg-[#FFC5D3] min-h-screen text-white p-5 flex flex-col items-center justify-center max-w-md mx-auto">
+      <div className="bg-[#FFC5D3] min-h-screen text-white p-5 flex flex-col items-center justify-center max-w-md mx-auto relative">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -142,7 +160,8 @@ function App() {
           >
             💝
           </motion.h1>
-          <h2 className="text-2xl font-bold mb-6">Enter the secret code</h2>
+
+          <h2 className="text-xl font-semibold mb-4">Enter the secret code</h2>
           <input
             type="password"
             value={codeInput}
@@ -173,8 +192,8 @@ function App() {
           </button>
         </motion.div>
 
-        {/* Footer - moved outside motion.div */}
-        <footer className="absolute bottom-4 left-0 right-0 text-center text-white/70 text-sm">
+        {/* Footer */}
+        <footer className="absolute bottom-4 left-0 right-0 text-center text-black text-sm">
           Heartify - Made with 💖 by Peters Joshua
         </footer>
       </div>
@@ -186,7 +205,7 @@ function App() {
     <>
       {showConfetti && <Confetti width={width} height={height} />}
 
-      <div className="bg-[#FFC5D3] max-h-screen text-white p-5 flex flex-col items-center justify-center max-w-md mx-auto relative">
+      <div className="bg-[#FFC5D3] min-h-screen text-white p-5 flex flex-col items-center justify-center max-w-md mx-auto relative">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -247,7 +266,7 @@ function App() {
             })}
           </motion.p>
           <p className="text-white/80">
-            Make sure you come back tommorrow to get a new message 😘
+            Make sure you come back tomorrow to get a new message 😘
           </p>
 
           {/* Replay Confetti Button */}
@@ -256,14 +275,14 @@ function App() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.9 }}
             onClick={() => setShowConfetti(true)}
-            className="mt-6 bg-white text-[#FFC5D3] py-3 px-6 text-lg rounded-xl font-semibold"
+            className="mt-6 bg-white text-[#FFC5D3] py-3 px-6 text-lg rounded-xl font-semibold cursor-pointer"
           >
             More Confetti! 🎉
           </motion.button>
         </motion.div>
 
-        {/* Footer - moved outside motion.div */}
-        <footer className="absolute bottom-0 pt-4 mt-4 left-0 right-0 text-center text-black text-sm">
+        {/* Footer */}
+        <footer className="absolute bottom-0 left-0 right-0 text-center text-black text-sm">
           Heartify - Made with 💖 by Peters Joshua
         </footer>
       </div>

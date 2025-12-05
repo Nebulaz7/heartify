@@ -187,6 +187,41 @@ INSERT INTO quotes (quote, date) VALUES
 ('Your love quote here 💕', '2025-12-15');
 ```
 
+## 🗃️ Database Structure
+
+### Users Table
+
+| Column     | Type         | Description         |
+| ---------- | ------------ | ------------------- |
+| id         | SERIAL       | Primary key         |
+| password   | VARCHAR(255) | Unique secret code  |
+| name       | VARCHAR(255) | User's display name |
+| created_at | TIMESTAMP    | Creation timestamp  |
+
+### Quotes Table
+
+| Column     | Type      | Description              |
+| ---------- | --------- | ------------------------ |
+| id         | SERIAL    | Primary key              |
+| user_id    | INTEGER   | Reference to users table |
+| quote      | TEXT      | The love message         |
+| date       | DATE      | Date for this quote      |
+| created_at | TIMESTAMP | Creation timestamp       |
+
+### Adding a New User with Quotes
+
+```sql
+-- Add a new user
+INSERT INTO users (password, name) VALUES ('newpassword', 'Darling');
+
+-- Get the user's ID (check in Supabase Table Editor or use)
+-- Then add their personalized quotes
+INSERT INTO quotes (user_id, quote, date) VALUES
+(4, 'Your first personalized message 💕', '2025-12-05'),
+(4, 'Your second personalized message 💖', '2025-12-06'),
+(4, 'Your third personalized message 💗', '2025-12-07');
+```
+
 ## 🛠️ Tech Stack
 
 - **Frontend:** React 18 + TypeScript
