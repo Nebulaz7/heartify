@@ -143,6 +143,11 @@ function App() {
     }
   };
 
+  const handleConfetti = () => {
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 9000);
+  };
+
   // Password Entry Screen
   if (!isAuthenticated) {
     return (
@@ -274,7 +279,7 @@ function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.9 }}
-            onClick={() => setShowConfetti(true)}
+            onClick={() => handleConfetti()}
             className="mt-6 bg-white text-[#FFC5D3] py-3 px-6 text-lg rounded-xl font-semibold cursor-pointer"
           >
             More Confetti! 🎉
